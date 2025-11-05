@@ -43,7 +43,6 @@ class HomeScreen extends StatelessWidget {
                SizedBox(height: 16.h),
 
               GridView.count(
-                physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
                 crossAxisCount: 2,
                 mainAxisSpacing: 16,
