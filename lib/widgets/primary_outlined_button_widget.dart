@@ -13,6 +13,7 @@ class PrimaryOutlinedButtonWidget extends StatelessWidget {
   final Color? textColor;
   final double? fontSize;
   final void Function()? onPress;
+
   const PrimaryOutlinedButtonWidget(
       {super.key,
         this.buttonText,
@@ -37,6 +38,7 @@ class PrimaryOutlinedButtonWidget extends StatelessWidget {
         fixedSize: Size(width ?? 331.w, height ?? 56.h),
       ),
       child: Text(
+        textAlign: TextAlign.start,
         buttonText ?? "",
         style: TextStyle(
             color: textColor ?? AppColors.primaryColor,

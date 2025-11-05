@@ -27,6 +27,7 @@ class AppAssets {
   static const String file = '${iconPath}file.svg';
   static const String search = '${iconPath}search.svg';
   static const String personn = '${iconPath}personn.svg';
+  static const String image = '${iconPath}image.svg';
   //photo of list
 
   static const String photo1 = '${imagesPath}photo1.png';
