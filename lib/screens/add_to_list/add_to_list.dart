@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:colist_proj/routes/app_routs.dart';
 import 'package:colist_proj/utils/constants/app_assets.dart';
 import 'package:colist_proj/utils/constants/app_colors.dart';
 import 'package:colist_proj/utils/constants/app_text_styles.dart';
@@ -6,7 +7,12 @@ import 'package:colist_proj/widgets/custom_text_field_add_to_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../home_screen.dart';
 
 class AddToList extends StatefulWidget {
   const AddToList({super.key});
@@ -22,8 +28,6 @@ class _AddToListState extends State<AddToList> {
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,29 +35,21 @@ class _AddToListState extends State<AddToList> {
         automaticallyImplyLeading: false,
         centerTitle: true,
         elevation: 0,
-        title: Text(
-          "Add List",
-          style: AppStyles.black18BoldStyle,
-        ),
+        title: Text("Add List", style: AppStyles.black18BoldStyle),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // List name input
             CustomTextFieldAddToList(
               listNameController: listNameController,
               title: "List Name",
             ),
             SizedBox(height: 32.h),
-
             Text(
               "Add image",
-              style: AppStyles.black18BoldStyle.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: AppStyles.black18BoldStyle.copyWith(fontWeight: FontWeight.w500),
             ),
             SizedBox(height: 8.h),
             Center(
@@ -84,24 +80,17 @@ class _AddToListState extends State<AddToList> {
                 ),
               ),
             ),
-
             SizedBox(height: 32.h),
-
             Text(
               "Items",
-              style: AppStyles.black18BoldStyle.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppStyles.black18BoldStyle.copyWith(fontWeight: FontWeight.w600),
             ),
             SizedBox(height: 8.h),
-
             CustomTextFieldAddToList(
               listNameController: itemController,
               title: "Add Item",
             ),
-
             const Spacer(),
-
             SizedBox(
               width: double.infinity,
               height: 48.h,
@@ -112,12 +101,10 @@ class _AddToListState extends State<AddToList> {
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                 ),
-                onPressed: () {
-                },
+                onPressed: _createList,
                 child: Text(
                   "Create",
-                  style:
-                  TextStyle(color: AppColors.whiteColor, fontSize: 16),
+                  style: TextStyle(color: AppColors.whiteColor, fontSize: 16),
                 ),
               ),
             ),
@@ -168,5 +155,37 @@ class _AddToListState extends State<AddToList> {
     Navigator.pop(context);
   }
 
+  Future<String?> _uploadImage(File imageFile) async {
+    try {
+      final fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      final ref = FirebaseStorage.instance.ref().child('list_images/$fileName.jpg');
+      await ref.putFile(imageFile);
+      return await ref.getDownloadURL();
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
+  }
 
+  Future<void> _createList() async {
+    if (listNameController.text.isEmpty || itemController.text.isEmpty) return;
+
+    String? imageUrl;
+    if (_selectedImage != null) {
+      imageUrl = await _uploadImage(_selectedImage!);
+    }
+
+    await FirebaseFirestore.instance.collection('lists').add({
+      'name': listNameController.text,
+      'items': [itemController.text],
+      'imageUrl': imageUrl ?? '',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        GoRouter.of(context).go(AppRoutes.homeScreen);
+      }
+    });
+  }
 }

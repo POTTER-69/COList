@@ -9,12 +9,15 @@ class ListCard extends StatelessWidget {
   final String members;
   final String lastUpdated;
 
+  final VoidCallback? onDelete;
+
   const ListCard({
     super.key,
     required this.imagePath,
     required this.title,
     required this.members,
     required this.lastUpdated,
+    this.onDelete,
   });
 
   @override
@@ -28,36 +31,56 @@ class ListCard extends StatelessWidget {
             children: [
               Align(
                 alignment: Alignment.topLeft,
-                child: Icon(Icons.more_vert, color: Colors.grey[600]),
+                child: PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: Colors.grey[600]),
+                  onSelected: (value) {
+                    if (value == 'delete' && onDelete != null) {
+                      onDelete!();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
+                  ],
+                ),
               ),
-              SizedBox(height: 10.h,),
+              SizedBox(height: 10.h),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
+                child: imagePath.isNotEmpty
+                    ? Image.network(
                   imagePath,
                   height: 90,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                )
+                    : Container(
+                  height: 90,
+                  width: double.infinity,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.image, size: 40),
                 ),
               ),
-               SizedBox(height: 10.h),
+              SizedBox(height: 10.h),
               Text(
                 lastUpdated,
-                style:  TextStyle(color: AppColors.greyColor, fontSize: 12),
+                style: TextStyle(color: AppColors.greyColor, fontSize: 12),
               ),
-               SizedBox(height: 4.h),
+              SizedBox(height: 4.h),
               Text(
                 title,
-                style:  TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryColor,
                 ),
               ),
-               SizedBox(height: 4.h),
+              SizedBox(height: 4.h),
               Text(
                 members,
-                style:  TextStyle(color: AppColors.greyColor, fontSize: 13),
+                style: TextStyle(color: AppColors.greyColor, fontSize: 13),
               ),
             ],
           ),
