@@ -10,6 +10,9 @@ import '../../utils/constants/app_text_styles.dart';
 import '../../widgets/back_button_widget.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primay_button_widget.dart';
+import '../../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,6 +26,8 @@ class _LoginScreenState extends State<LoginScreen> {
   late TextEditingController emailController;
   late TextEditingController passwordController;
   bool _isPasswordVisible = false;
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -136,15 +141,41 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(height: 18.h),
 
                   PrimaryButtonWidget(
-                    buttonText: "Login",
-                    onPress: () {
-                      if (_formKey.currentState!.validate()) {
-                        print("Logging in with ${emailController.text}");
-
-
-                        GoRouter.of(context).pushNamed(AppRoutes.mainScreen);
-                      }
-                    },
+                    buttonText: _isLoading ? "Loading..." : "Login",
+                    onPress: _isLoading
+                        ? () {}
+                        : () async {
+                            if (_formKey.currentState!.validate()) {
+                              setState(() {
+                                _isLoading = true;
+                              });
+                              try {
+                                await _authService.signInWithEmailPassword(
+                                  emailController.text.trim(),
+                                  passwordController.text.trim(),
+                                );
+                                if (mounted) {
+                                  GoRouter.of(context)
+                                      .pushNamed(AppRoutes.mainScreen);
+                                }
+                              } on FirebaseAuthException catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(e.message ?? "Login failed"),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() {
+                                    _isLoading = false;
+                                  });
+                                }
+                              }
+                            }
+                          },
                   ),
 
 

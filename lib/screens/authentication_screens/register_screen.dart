@@ -10,6 +10,9 @@ import '../../utils/constants/app_text_styles.dart';
 import '../../widgets/back_button_widget.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primay_button_widget.dart';
+import '../../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 
 class RegisterScreen extends StatefulWidget {
@@ -25,6 +28,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -133,14 +138,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                           // Register Button
                           PrimaryButtonWidget(
-                            buttonText: "Register",
-                            onPress: () {
-                              if (_formKey.currentState!.validate()) {
-                                print(
-                                  'Register data: ${_usernameController.text}, ${_emailController.text}',
-                                );
-                              }
-                            },
+                            buttonText: _isLoading ? "Loading..." : "Register",
+                            onPress: _isLoading
+                                ? () {}
+                                : () async {
+                                    if (_formKey.currentState!.validate()) {
+                                      setState(() {
+                                        _isLoading = true;
+                                      });
+                                      try {
+                                        await _authService.signUpWithEmailPassword(
+                                          _emailController.text.trim(),
+                                          _passwordController.text.trim(),
+                                        );
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  "Registration successful! Please login."),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                          GoRouter.of(context)
+                                              .pushReplacementNamed(
+                                                  AppRoutes.loginScreen);
+                                        }
+                                      } on FirebaseAuthException catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  e.message ?? "Registration failed"),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() {
+                                            _isLoading = false;
+                                          });
+                                        }
+                                      }
+                                    }
+                                  },
                           ),
                           SizedBox(height: 32.h),
 
