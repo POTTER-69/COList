@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import '../utils/constants/app_colors.dart';
 
 class ListCard extends StatelessWidget {
@@ -8,8 +7,7 @@ class ListCard extends StatelessWidget {
   final String title;
   final String members;
   final String lastUpdated;
-
-  final VoidCallback? onDelete;
+  final VoidCallback onDelete;
 
   const ListCard({
     super.key,
@@ -17,73 +15,147 @@ class ListCard extends StatelessWidget {
     required this.title,
     required this.members,
     required this.lastUpdated,
-    this.onDelete,
+    required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Align(
-                alignment: Alignment.topLeft,
-                child: PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, color: Colors.grey[600]),
-                  onSelected: (value) {
-                    if (value == 'delete' && onDelete != null) {
-                      onDelete!();
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete'),
-                    ),
-                  ],
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: GestureDetector(
+            onTap: onDelete,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 4.h),
+              child: Icon(
+                Icons.more_vert,
+                size: 20.sp,
+                color: const Color(0xff8391A1),
               ),
-              SizedBox(height: 10.h),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: imagePath.isNotEmpty
-                    ? Image.network(
-                  imagePath,
-                  height: 90,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                )
-                    : Container(
-                  height: 90,
-                  width: double.infinity,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.image, size: 40),
-                ),
-              ),
-              SizedBox(height: 10.h),
-              Text(
-                lastUpdated,
-                style: TextStyle(color: AppColors.greyColor, fontSize: 12),
-              ),
-              SizedBox(height: 4.h),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryColor,
-                ),
-              ),
-              SizedBox(height: 4.h),
-              Text(
-                members,
-                style: TextStyle(color: AppColors.greyColor, fontSize: 13),
-              ),
-            ],
+            ),
           ),
+        ),
+
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12.r),
+              child: _buildImage(),
+            ),
+          ),
+        ),
+
+        SizedBox(height: 8.h),
+
+        Text(
+          lastUpdated,
+          style: TextStyle(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xff1E232C),
+            fontFamily: "Urbanist",
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+
+        SizedBox(height: 4.h),
+
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 15.sp,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primaryColor,
+            fontFamily: "Urbanist",
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+
+        SizedBox(height: 4.h),
+
+        Text(
+          members,
+          style: TextStyle(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xff8391A1),
+            fontFamily: "Urbanist",
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImage() {
+    if (imagePath.isEmpty) {
+      return _buildPlaceholder();
+    }
+
+    if (imagePath.startsWith('http')) {
+      return Image.network(
+        imagePath,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: SizedBox(
+              width: 24.w,
+              height: 24.w,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primaryColor,
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return _buildPlaceholder();
+        },
+      );
+    }
+
+    return Image.asset(
+      imagePath,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: const Color(0xFFE8ECF4),
+      child: Center(
+        child: Icon(
+          Icons.shopping_bag_outlined,
+          size: 32.sp,
+          color: AppColors.primaryColor,
         ),
       ),
     );

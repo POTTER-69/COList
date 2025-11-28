@@ -12,8 +12,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../home_screen.dart';
-
 class AddToList extends StatefulWidget {
   const AddToList({super.key});
 
@@ -27,6 +25,9 @@ class _AddToListState extends State<AddToList> {
 
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
+  bool _isLoading = false;
+
+  int _itemQuantity = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -35,80 +36,141 @@ class _AddToListState extends State<AddToList> {
         automaticallyImplyLeading: false,
         centerTitle: true,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => context.pop(),
+        ),
         title: Text("Add List", style: AppStyles.black18BoldStyle),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CustomTextFieldAddToList(
-              listNameController: listNameController,
-              title: "List Name",
-            ),
-            SizedBox(height: 32.h),
-            Text(
-              "Add image",
-              style: AppStyles.black18BoldStyle.copyWith(fontWeight: FontWeight.w500),
-            ),
-            SizedBox(height: 8.h),
-            Center(
-              child: InkWell(
-                onTap: _showImagePickerOptions,
-                child: Container(
-                  height: 175.h,
-                  width: 263.w,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8ECF4),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: _selectedImage == null
-                      ? Center(
-                    child: IconButton(
-                      onPressed: _showImagePickerOptions,
-                      icon: SvgPicture.asset(AppAssets.image),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CustomTextFieldAddToList(
+                listNameController: listNameController,
+                title: "List Name",
+              ),
+              SizedBox(height: 32.h),
+              Text(
+                "Add image",
+                style: AppStyles.black18BoldStyle.copyWith(fontWeight: FontWeight.w500),
+              ),
+              SizedBox(height: 8.h),
+
+              Center(
+                child: InkWell(
+                  onTap: _showImagePickerOptions,
+                  borderRadius: BorderRadius.circular(8.r),
+                  child: Container(
+                    height: 175.h,
+                    width: 263.w,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8ECF4),
+                      borderRadius: BorderRadius.circular(8.r),
                     ),
-                  )
-                      : ClipRRect(
-                    borderRadius: BorderRadius.circular(8.r),
-                    child: Image.file(
-                      _selectedImage!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
+                    child: _selectedImage == null
+                        ? Center(
+                      child: IconButton(
+                        onPressed: _showImagePickerOptions,
+                        icon: SvgPicture.asset(AppAssets.image),
+                      ),
+                    )
+                        : ClipRRect(
+                      borderRadius: BorderRadius.circular(8.r),
+                      child: Image.file(
+                        _selectedImage!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            SizedBox(height: 32.h),
-            Text(
-              "Items",
-              style: AppStyles.black18BoldStyle.copyWith(fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 8.h),
-            CustomTextFieldAddToList(
-              listNameController: itemController,
-              title: "Add Item",
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 48.h,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.r),
+
+              SizedBox(height: 32.h),
+              Text(
+                "Items",
+                style: AppStyles.black18BoldStyle.copyWith(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 8.h),
+
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: CustomTextFieldAddToList(
+                      listNameController: itemController,
+                      title: "Add Item",
+                    ),
+                  ),
+
+                  SizedBox(width: 12.w),
+
+                  Container(
+                    height: 50.h,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F8F9),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(color: const Color(0xFFE8ECF4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.remove, size: 20.sp),
+                          color: AppColors.primaryColor,
+                          onPressed: () {
+                            if (_itemQuantity > 1) {
+                              setState(() {
+                                _itemQuantity--;
+                              });
+                            }
+                          },
+                        ),
+                        Text(
+                          '$_itemQuantity',
+                          style: AppStyles.black16w500Style.copyWith(fontSize: 18.sp),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.add, size: 20.sp),
+                          color: AppColors.primaryColor,
+                          onPressed: () {
+                            setState(() {
+                              _itemQuantity++;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 48.h),
+
+              SizedBox(
+                width: double.infinity,
+                height: 48.h,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  onPressed: _isLoading ? null : _createList,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                    "Create",
+                    style: TextStyle(color: AppColors.whiteColor, fontSize: 16),
                   ),
                 ),
-                onPressed: _createList,
-                child: Text(
-                  "Create",
-                  style: TextStyle(color: AppColors.whiteColor, fontSize: 16),
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -152,7 +214,7 @@ class _AddToListState extends State<AddToList> {
         _selectedImage = File(pickedFile.path);
       });
     }
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   Future<String?> _uploadImage(File imageFile) async {
@@ -168,24 +230,38 @@ class _AddToListState extends State<AddToList> {
   }
 
   Future<void> _createList() async {
-    if (listNameController.text.isEmpty || itemController.text.isEmpty) return;
+    if (listNameController.text.isEmpty || itemController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter list name and at least one item")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
 
     String? imageUrl;
     if (_selectedImage != null) {
       imageUrl = await _uploadImage(_selectedImage!);
     }
 
+    final firstItem = {
+      'name': itemController.text.trim(),
+      'quantity': _itemQuantity,
+      'isChecked': false,
+    };
+
     await FirebaseFirestore.instance.collection('lists').add({
-      'name': listNameController.text,
-      'items': [itemController.text],
+      'name': listNameController.text.trim(),
+      'items': [firstItem],
       'imageUrl': imageUrl ?? '',
       'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'members': [],
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        GoRouter.of(context).go(AppRoutes.homeScreen);
-      }
-    });
+    if (mounted) {
+      setState(() => _isLoading = false);
+      GoRouter.of(context).go(AppRoutes.homeScreen);
+    }
   }
 }
