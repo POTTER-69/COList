@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../utils/constants/app_text_styles.dart';
 import '../widgets/list_card_widgets.dart';
+import 'list_details_screen/list_details_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -76,7 +77,7 @@ class HomeScreen extends StatelessWidget {
                       return GestureDetector(
                         onTap: () {
                           GoRouter.of(context).push(
-                            AppRoutes.ListDetailsScreen,
+                            AppRoutes.listDetailsScreen,
                             extra: {
                               'id': doc.id,
                               'name': data['name'],

@@ -141,6 +141,20 @@ class _ListDetailsScreenState extends State<ListDetailsScreen> {
         ),
         title: Text(widget.listName, style: AppStyles.black18BoldStyle),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.more_horiz, color: AppColors.greyColor),
+            onPressed: () {
+              context.push(
+                AppRoutes.inviteCollaboratorsScreen,
+                extra: {
+                  'id': widget.listId,
+                  'name': widget.listName,
+                },
+              );
+            },
+          ),
+        ],
       ),
 
       body: Column(

@@ -1,12 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:colist_proj/routes/app_routs.dart';
 import 'package:colist_proj/utils/constants/app_text_styles.dart';
 import 'package:colist_proj/utils/constants/app_colors.dart';
 import 'package:colist_proj/widgets/spacing_widgets.dart';
-import 'package:colist_proj/widgets/back_button_widget.dart';
 
 class InviteCollaboratorsScreen extends StatelessWidget {
-  const InviteCollaboratorsScreen({super.key});
+  final String listId;
+  final String listName;
+
+  const InviteCollaboratorsScreen({
+    super.key,
+    required this.listId,
+    required this.listName,
+  });
+
+  void _shareListLink(BuildContext context) {
+    final String inviteLink = "https://colist.app/listDetailsScreen?id=$listId&name=$listName";
+
+    final String message = "Join my list '$listName' on CoList app:\n$inviteLink";
+
+    Share.share(message);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +36,7 @@ class InviteCollaboratorsScreen extends StatelessWidget {
           padding: EdgeInsets.only(left: 16.w),
           child: IconButton(
             icon: Icon(Icons.arrow_back_ios, color: AppColors.primaryColor),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
           ),
         ),
         title: Text(
@@ -31,8 +48,7 @@ class InviteCollaboratorsScreen extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.more_horiz, color: AppColors.greyColor),
             onPressed: () {
-              // Handle menu action
-            },
+              },
           ),
         ],
       ),
@@ -41,7 +57,6 @@ class InviteCollaboratorsScreen extends StatelessWidget {
         children: [
           HeightSpace(20),
 
-          // Suggested Section
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Text(
@@ -52,7 +67,6 @@ class InviteCollaboratorsScreen extends StatelessWidget {
 
           HeightSpace(16),
 
-          // Suggested People List
           const SuggestedPersonItem(
             name: 'Ibrahim Ahmed',
             email: 'Ibrahim@gmail.com',
@@ -76,7 +90,6 @@ class InviteCollaboratorsScreen extends StatelessWidget {
 
           HeightSpace(32),
 
-          // Shareable Link Section
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Text(
@@ -87,13 +100,10 @@ class InviteCollaboratorsScreen extends StatelessWidget {
 
           HeightSpace(16),
 
-          // Generate Link Button
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: InkWell(
-              onTap: () {
-                // Handle generate link
-              },
+              onTap: () => _shareListLink(context),
               borderRadius: BorderRadius.circular(12.r),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -122,7 +132,6 @@ class InviteCollaboratorsScreen extends StatelessWidget {
         ],
       ),
 
-      // Bottom Navigation Bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -142,31 +151,48 @@ class InviteCollaboratorsScreen extends StatelessWidget {
               children: [
                 IconButton(
                   icon: Icon(Icons.home_outlined, size: 28.sp, color: AppColors.greyColor),
-                  onPressed: () {},
+                  onPressed: () => context.go(AppRoutes.homeScreen),
                 ),
                 IconButton(
                   icon: Icon(Icons.notifications_outlined, size: 28.sp, color: AppColors.greyColor),
-                  onPressed: () {},
+                  onPressed: () => context.push(AppRoutes.notificationScreen),
                 ),
-                Container(
-                  width: 56.w,
-                  height: 56.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: Icon(Icons.content_paste_rounded, color: Colors.white, size: 28.sp),
-                    onPressed: () {},
+                InkWell(
+                  onTap: () => context.push(AppRoutes.addToListScreen),
+                  child: Container(
+                    width: 56.w,
+                    height: 56.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primaryColor.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 22.w,
+                        height: 22.h,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Icon(Icons.add, color: AppColors.primaryColor, size: 18.sp),
+                      ),
+                    ),
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.shopping_cart_outlined, size: 28.sp, color: AppColors.greyColor),
-                  onPressed: () {},
+                  icon: Icon(Icons.inventory_2_outlined, size: 28.sp, color: AppColors.greyColor),
+                  onPressed: () => context.push(AppRoutes.archivedScreen),
                 ),
                 IconButton(
                   icon: Icon(Icons.settings_outlined, size: 28.sp, color: AppColors.greyColor),
-                  onPressed: () {},
+                  onPressed: () => context.push(AppRoutes.settingsScreen),
                 ),
               ],
             ),
@@ -193,13 +219,11 @@ class SuggestedPersonItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-        // Handle person selection
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
         child: Row(
           children: [
-            // Profile Avatar
             Container(
               width: 48.w,
               height: 48.h,
@@ -218,10 +242,7 @@ class SuggestedPersonItem extends StatelessWidget {
                 ),
               ),
             ),
-
             WidthSpace(12),
-
-            // Name and Email
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,82 +267,5 @@ class SuggestedPersonItem extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-// Helper classes (already in your project, included here for reference)
-class AppColors {
-  static Color primaryColor = const Color(0xff617AFD);
-  static Color secondaryColor = const Color(0xff8391A1);
-  static Color blackColor = const Color(0xff1F2C37);
-  static Color greyColor = const Color(0xff9CA4AB);
-  static Color whiteColor = Colors.white;
-}
-
-class AppFonts {
-  static String mainFontName = "Urbanist";
-}
-
-class AppStyles {
-  static TextStyle primaryHeadLinesStyle = TextStyle(
-    fontFamily: AppFonts.mainFontName,
-    fontSize: 30.sp,
-    fontWeight: FontWeight.bold,
-    color: AppColors.primaryColor,
-  );
-
-  static TextStyle subtitlesStyles = TextStyle(
-    fontFamily: AppFonts.mainFontName,
-    fontSize: 16.sp,
-    fontWeight: FontWeight.w400,
-    color: AppColors.secondaryColor,
-  );
-
-  static TextStyle black16w500Style = TextStyle(
-    fontFamily: AppFonts.mainFontName,
-    fontSize: 16.sp,
-    fontWeight: FontWeight.w500,
-    color: AppColors.blackColor,
-  );
-
-  static TextStyle grey12MediumStyle = TextStyle(
-    fontFamily: AppFonts.mainFontName,
-    fontSize: 12.sp,
-    fontWeight: FontWeight.w500,
-    color: AppColors.greyColor,
-  );
-
-  static TextStyle black15BoldStyle = TextStyle(
-    fontFamily: AppFonts.mainFontName,
-    fontSize: 15.sp,
-    fontWeight: FontWeight.bold,
-    color: Colors.black,
-  );
-
-  static TextStyle black18BoldStyle = TextStyle(
-    fontFamily: AppFonts.mainFontName,
-    fontSize: 18.sp,
-    fontWeight: FontWeight.bold,
-    color: Colors.black,
-  );
-}
-
-class HeightSpace extends StatelessWidget {
-  final double height;
-  const HeightSpace(this.height, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(height: height.h);
-  }
-}
-
-class WidthSpace extends StatelessWidget {
-  final double width;
-  const WidthSpace(this.width, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(width: width.w);
   }
 }
