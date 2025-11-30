@@ -11,6 +11,7 @@ import '../screens/home_screen.dart';
 import '../screens/list_details_screen/list_details_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/on_boarding/onboarding_screen.dart';
+import '../screens/profile_screen/profile_screen.dart';
 import '../screens/splash_screen.dart';
 import 'app_routs.dart';
 import 'package:colist_proj/screens/notifications_Screen/notifications_screen.dart';
@@ -18,7 +19,7 @@ import 'package:colist_proj/screens/archived_screen/archived_screen.dart';
 import 'package:colist_proj/screens/settings_screen/settings_screen.dart';
 import 'package:colist_proj/screens/add_to_list/add_to_list.dart';
 import 'package:colist_proj/screens/invite_screen/invite_screen.dart';
-
+import 'package:colist_proj/screens/profile_screen/profile_screen.dart';
 class RouterGenerationConfig {
   static GoRouter goRouter = GoRouter(
     initialLocation: AppRoutes.splashScreen,
@@ -42,7 +43,6 @@ class RouterGenerationConfig {
       GoRoute(path: AppRoutes.passwordChangedScreen, name: AppRoutes.passwordChangedScreen, builder: (context, state) => const PasswordChangedScreen()),
       GoRoute(path: AppRoutes.homeScreen, name: AppRoutes.homeScreen, builder: (context, state) => const HomeScreen()),
       GoRoute(path: AppRoutes.forgetPasswordScreen, name: AppRoutes.forgetPasswordScreen, builder: (context, state) => const ForgetPasswordScreen()),
-      GoRoute(path: AppRoutes.mainScreen, name: AppRoutes.mainScreen, builder: (context, state) => const MainScreen()),
 
       GoRoute(
         path: AppRoutes.listDetailsScreen,
@@ -84,6 +84,13 @@ class RouterGenerationConfig {
           );
         },
       ),
+
+      GoRoute(
+        path: AppRoutes.profileScreen,
+        name: AppRoutes.profileScreen,
+        builder: (context, state) => const ProfileScreen(),
+      ),
+
     ],
   );
 }

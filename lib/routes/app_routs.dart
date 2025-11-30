@@ -12,7 +12,7 @@ class AppRoutes {
   static const String settingsScreen = '/settingsScreen';
 
   static const String listDetailsScreen = '/listDetailsScreen';
-
+  static const String profileScreen = '/profileScreen';
   static const String notificationScreen = '/notificationScreen';
   static const String archivedScreen = '/archivedScreen';
   static const String addToListScreen = '/addToListScreen';
