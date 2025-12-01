@@ -29,6 +29,57 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  void _showListOptions(BuildContext context, String listId, String listName) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16.r))),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(listName, style: AppStyles.black18BoldStyle),
+              SizedBox(height: 16.h),
+
+              ListTile(
+                leading: Container(
+                  padding: EdgeInsets.all(8.r),
+                  decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(8.r)),
+                  child: const Icon(Icons.archive_outlined, color: Colors.orange),
+                ),
+                title: const Text("Archive List"),
+                subtitle: const Text("Move to archived screen"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await FirebaseFirestore.instance.collection('lists').doc(listId).update({
+                    'archived': true,
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("List Archived")));
+                },
+              ),
+
+              ListTile(
+                leading: Container(
+                  padding: EdgeInsets.all(8.r),
+                  decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8.r)),
+                  child: const Icon(Icons.delete_outline, color: Colors.red),
+                ),
+                title: const Text("Delete List"),
+                subtitle: const Text("Permanently delete this list"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await FirebaseFirestore.instance.collection('lists').doc(listId).delete();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("List Deleted")));
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -74,6 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -81,7 +133,9 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             if (!_isSearching)
               Text("Your Lists", style: AppStyles.primaryHeadLinesStyle.copyWith(fontSize: 20)),
+
             SizedBox(height: 16.h),
+
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -129,12 +183,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemBuilder: (context, index) {
                       final doc = docs[index];
                       final data = doc.data() as Map<String, dynamic>;
+
                       final Timestamp? timeStamp = data['updatedAt'] ?? data['createdAt'];
                       final String timeAgo = _formatTimeAgo(timeStamp);
                       final List membersList = (data['members'] is List) ? data['members'] : [];
                       final int membersCount = membersList.length;
-
-                      String imageUrl = data['imageUrl'] ?? '';
 
                       return GestureDetector(
                         onTap: () {
@@ -143,65 +196,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             extra: {'id': doc.id, 'name': data['name']},
                           );
                         },
-                        child: Stack(
-                          children: [
-                            ListCard(
-                              imagePath: imageUrl, // يدعم Base64 أو URL
-                              title: data['name'] ?? '',
-                              members: '$membersCount members',
-                              lastUpdated: 'Updated $timeAgo',
-                              onDelete: () async {
-                                await FirebaseFirestore.instance.collection('lists').doc(doc.id).delete();
-                              },
-                            ),
-                            Positioned(
-                              right: 8,
-                              top: 8,
-                              child: GestureDetector(
-                                onTap: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    builder: (_) {
-                                      return SizedBox(
-                                        height: 180,
-                                        child: Column(
-                                          children: [
-                                            ListTile(
-                                              leading: const Icon(Icons.archive_outlined),
-                                              title: const Text("Archive"),
-                                              onTap: () async {
-                                                await FirebaseFirestore.instance
-                                                    .collection('lists')
-                                                    .doc(doc.id)
-                                                    .update({"archived": true});
-                                                Navigator.pop(context);
-                                              },
-                                            ),
-                                            ListTile(
-                                              leading: const Icon(Icons.delete_outline),
-                                              title: const Text("Delete"),
-                                              onTap: () async {
-                                                await FirebaseFirestore.instance
-                                                    .collection('lists')
-                                                    .doc(doc.id)
-                                                    .delete();
-                                                Navigator.pop(context);
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                                child: const CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Colors.black12,
-                                  child: Icon(Icons.more_vert, color: Colors.black),
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: ListCard(
+                          imagePath: data['imageUrl'] ?? '',
+                          title: data['name'] ?? '',
+                          members: '$membersCount members',
+                          lastUpdated: 'Updated $timeAgo',
+                          onDelete: () {
+                            _showListOptions(context, doc.id, data['name']);
+                          },
                         ),
                       );
                     },
@@ -212,14 +214,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+
       bottomNavigationBar: Container(
         height: 80.h,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2)),
-          ],
-        ),
+        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))]),
         child: SafeArea(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
@@ -231,23 +229,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 InkWell(
                   onTap: () => context.push(AppRoutes.addToListScreen),
                   child: Container(
-                    width: 56.w,
-                    height: 56.h,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: AppColors.primaryColor.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
-                      ],
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 22.w,
-                        height: 22.h,
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6.r)),
-                        child: Icon(Icons.add, color: AppColors.primaryColor, size: 18.sp),
-                      ),
-                    ),
+                    width: 56.w, height: 56.h,
+                    decoration: BoxDecoration(color: AppColors.primaryColor, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AppColors.primaryColor.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))]),
+                    child: Center(child: Container(width: 22.w, height: 22.h, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6.r)), child: Icon(Icons.add, color: AppColors.primaryColor, size: 18.sp))),
                   ),
                 ),
                 IconButton(icon: Icon(Icons.inventory_2_outlined, size: 28.sp, color: AppColors.greyColor), onPressed: () => context.push(AppRoutes.archivedScreen)),

@@ -75,6 +75,7 @@ class ListCard extends StatelessWidget {
 
         SizedBox(height: 4.h),
 
+
         Text(
           title,
           style: TextStyle(

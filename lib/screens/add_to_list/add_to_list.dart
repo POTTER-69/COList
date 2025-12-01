@@ -132,7 +132,6 @@ class _AddToListState extends State<AddToList> {
 
   Future<void> _createList() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please Login First!")));
       return;
@@ -163,9 +162,10 @@ class _AddToListState extends State<AddToList> {
         'imageUrl': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-
         'ownerId': user.uid,
         'members': [user.uid],
+
+        'archived': false,
       });
 
       if (mounted) {
