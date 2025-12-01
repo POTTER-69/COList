@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'dart:convert'; // عشان تحويل الصورة لنص
-import 'package:firebase_auth/firebase_auth.dart'; // 👈 عشان نجيب الـ ID بتاعك
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:colist_proj/routes/app_routs.dart';
 import 'package:colist_proj/utils/constants/app_assets.dart';
 import 'package:colist_proj/utils/constants/app_colors.dart';
@@ -120,7 +120,6 @@ class _AddToListState extends State<AddToList> {
     if (mounted) Navigator.pop(context);
   }
 
-  // ضغط الصورة وتحويلها لنص عشان منستخدمش Storage بفلوس
   Future<String?> _convertImageToBase64(File imageFile) async {
     try {
       final compressedBytes = await FlutterImageCompress.compressWithFile(
@@ -134,7 +133,6 @@ class _AddToListState extends State<AddToList> {
   Future<void> _createList() async {
     final user = FirebaseAuth.instance.currentUser;
 
-    // 1. لازم نتأكد إنك مسجل دخول
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please Login First!")));
       return;
@@ -166,11 +164,8 @@ class _AddToListState extends State<AddToList> {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
 
-        // 👇👇 هنا الحل السحري 👇👇
-        // بنسجل إنك صاحب القائمة وإنك عضو فيها
         'ownerId': user.uid,
         'members': [user.uid],
-        // 👆👆 من غير السطر ده، الهوم سكرين مش هتعرضها 👆👆
       });
 
       if (mounted) {

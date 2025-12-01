@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../utils/constants/app_colors.dart';
@@ -137,13 +138,18 @@ class ListCard extends StatelessWidget {
       );
     }
 
-    return Image.asset(
-      imagePath,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-    );
+    try {
+      final cleanBase64 = imagePath.replaceAll(RegExp(r'\s+'), '');
+      return Image.memory(
+        base64Decode(cleanBase64),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+      );
+    } catch (e) {
+      return _buildPlaceholder();
+    }
   }
 
   Widget _buildPlaceholder() {
@@ -155,7 +161,7 @@ class ListCard extends StatelessWidget {
         child: Icon(
           Icons.shopping_bag_outlined,
           size: 32.sp,
-          color: AppColors.primaryColor,
+          color: AppColors.primaryColor.withOpacity(0.5),
         ),
       ),
     );
