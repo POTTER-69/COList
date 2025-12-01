@@ -39,14 +39,10 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
-
         leading: IconButton(
           icon: SvgPicture.asset(AppAssets.personn),
-          onPressed: () {
-            context.push(AppRoutes.profileScreen);
-          },
+          onPressed: () => context.push(AppRoutes.profileScreen),
         ),
-
         centerTitle: true,
         title: _isSearching
             ? TextField(
@@ -58,15 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
             hintStyle: TextStyle(color: Colors.grey[400]),
           ),
           style: AppStyles.black18BoldStyle,
-          onChanged: (val) {
-            setState(() {
-              _searchQuery = val.toLowerCase();
-            });
-          },
+          onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
         )
             : null,
-
-
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.black),
@@ -91,15 +81,13 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!_isSearching)
-              Text(
-                "Your Lists",
-                style: AppStyles.primaryHeadLinesStyle.copyWith(fontSize: 20),
-              ),
+              Text("Your Lists", style: AppStyles.primaryHeadLinesStyle.copyWith(fontSize: 20)),
 
             SizedBox(height: 16.h),
 
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
+                // لسه بنفلتر بـ members عشان تشوف الحاجات اللي تخصك بس
                 stream: FirebaseFirestore.instance
                     .collection('lists')
                     .where('members', arrayContains: user?.uid)
@@ -111,6 +99,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
 
                   var docs = snapshot.data?.docs ?? [];
+
+                  // كود البحث
                   if (_searchQuery.isNotEmpty) {
                     docs = docs.where((doc) {
                       final data = doc.data() as Map<String, dynamic>;
@@ -126,10 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Icon(Icons.format_list_bulleted, size: 60.sp, color: Colors.grey[300]),
                           SizedBox(height: 10.h),
-                          Text(
-                            _searchQuery.isEmpty ? 'No lists yet. Create one!' : 'No results found',
-                            style: TextStyle(color: Colors.grey[400]),
-                          ),
+                          Text('No lists found.', style: TextStyle(color: Colors.grey[400])),
                         ],
                       ),
                     );
@@ -164,15 +151,28 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: EdgeInsets.only(right: 20.w),
                           child: const Icon(Icons.delete_forever, color: Colors.white, size: 30),
                         ),
-                        confirmDismiss: (direction) async {
-                          if (data['ownerId'] != user?.uid) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Only owner can delete")));
-                            return false;
-                          }
-                          return true;
-                        },
+                        // ❌ لغينا شرط الـ ownerId هنا خلاص
+                        // أي حد يقدر يمسح
                         onDismissed: (direction) {
+                          // 1. حفظ نسخة للتراجع
+                          final deletedData = data;
+                          final deletedId = doc.id;
+
+                          // 2. الحذف الفعلي
                           FirebaseFirestore.instance.collection('lists').doc(doc.id).delete();
+
+                          // 3. رسالة التراجع
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("'${data['name']}' deleted"),
+                              action: SnackBarAction(
+                                label: 'Undo',
+                                onPressed: () {
+                                  FirebaseFirestore.instance.collection('lists').doc(deletedId).set(deletedData);
+                                },
+                              ),
+                            ),
+                          );
                         },
                         child: GestureDetector(
                           onTap: () {
@@ -186,7 +186,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             title: data['name'] ?? '',
                             members: '$membersCount members',
                             lastUpdated: 'Updated $timeAgo',
-                            onDelete: () {},
+                            onDelete: () async {
+                              // حذف مباشر بدون شروط
+                              await FirebaseFirestore.instance.collection('lists').doc(doc.id).delete();
+                            },
                           ),
                         ),
                       );
@@ -204,11 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2)),
           ],
         ),
         child: SafeArea(
@@ -239,12 +238,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _formatTimeAgo(Timestamp? timestamp) {
     if (timestamp == null) return 'Unknown';
-    final diff = DateTime.now().difference(timestamp.toDate());
+    final DateTime date = timestamp.toDate();
+    final DateTime now = DateTime.now();
+    final Duration diff = now.difference(date);
     if (diff.inDays > 365) return '${(diff.inDays / 365).floor()}y ago';
     if (diff.inDays > 30) return '${(diff.inDays / 30).floor()}mo ago';
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
+    if (diff.inDays > 7) return '${(diff.inDays / 7).floor()}w ago';
+    if (diff.inDays >= 1) return '${diff.inDays}d ago';
+    if (diff.inHours >= 1) return '${diff.inHours}h ago';
+    if (diff.inMinutes >= 1) return '${diff.inMinutes}m ago';
     return 'Just now';
   }
 }
