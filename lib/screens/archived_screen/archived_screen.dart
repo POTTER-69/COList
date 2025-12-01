@@ -1,4 +1,4 @@
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -22,33 +22,92 @@ class _ArchivedScreenState extends State<ArchivedScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.whiteColor,
         elevation: 0,
-        title: Text('Archived', style: AppStyles.black18BoldStyle),
+        title: Text('Archived Lists', style: AppStyles.black18BoldStyle),
         centerTitle: true,
       ),
-      body: ListView(
-        padding: EdgeInsets.all(16.w),
-        children: const [
-          ArchivedListCard(
-            date: 'Archived on 12/12/2023',
-            listName: 'Grocery Shopping',
-            itemCount: 12,
-            image: Color(0xFFFFF8E1),
-          ),
-          HeightSpace(12),
-          ArchivedListCard(
-            date: 'Archived on 11/20/2023',
-            listName: 'Home Supplies',
-            itemCount: 8,
-            image: Color(0xFFE8F5E9),
-          ),
-          HeightSpace(12),
-          ArchivedListCard(
-            date: 'Archived on 10/5/2023',
-            listName: 'Party Supplies',
-            itemCount: 15,
-            image: Color(0xFFE1F5FE),
-          ),
-        ],
+
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('lists')
+            .where('archived', isEqualTo: true)
+            .orderBy('updatedAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
+            return const Center(
+              child: Text(
+                "No archived lists",
+                style: TextStyle(color: Colors.grey),
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: EdgeInsets.all(16.w),
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => HeightSpace(12),
+            itemBuilder: (context, index) {
+              final doc = docs[index];
+              final data = doc.data() as Map<String, dynamic>;
+
+              final Timestamp? timestamp = data['updatedAt'];
+              final String date = timestamp != null
+                  ? "Archived on ${timestamp.toDate().day}/${timestamp.toDate().month}/${timestamp.toDate().year}"
+                  : "Archived";
+
+              return ArchivedListCard(
+                date: date,
+                listName: data['name'] ?? '',
+                itemCount: data['itemsCount'] ?? 0,
+                image: Colors.grey.shade200,
+                onMoreTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (_) {
+                      return SizedBox(
+                        height: 170,
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.unarchive_outlined),
+                              title: const Text("Unarchive"),
+                              onTap: () async {
+                                await FirebaseFirestore.instance
+                                    .collection('lists')
+                                    .doc(doc.id)
+                                    .update({"archived": false});
+
+                                Navigator.pop(context);
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.delete_outline),
+                              title: const Text("Delete"),
+                              onTap: () async {
+                                await FirebaseFirestore.instance
+                                    .collection('lists')
+                                    .doc(doc.id)
+                                    .delete();
+
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
       ),
     );
   }

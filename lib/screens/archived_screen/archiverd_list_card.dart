@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -11,6 +10,7 @@ class ArchivedListCard extends StatelessWidget {
   final String listName;
   final int itemCount;
   final Color image;
+  final VoidCallback onMoreTap;
 
   const ArchivedListCard({
     super.key,
@@ -18,6 +18,7 @@ class ArchivedListCard extends StatelessWidget {
     required this.listName,
     required this.itemCount,
     required this.image,
+    required this.onMoreTap,
   });
 
   @override
@@ -60,9 +61,22 @@ class ArchivedListCard extends StatelessWidget {
                 ],
               ),
             ),
+
+            // More Button
+            GestureDetector(
+              onTap: onMoreTap,
+              child: const CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.black12,
+                child: Icon(Icons.more_vert, color: Colors.black),
+              ),
+            ),
+
+            WidthSpace(10),
+
             Container(
-              width: 80.w,
-              height: 80.h,
+              width: 70.w,
+              height: 70.h,
               decoration: BoxDecoration(
                 color: image,
                 borderRadius: BorderRadius.circular(8.r),
@@ -70,7 +84,7 @@ class ArchivedListCard extends StatelessWidget {
               child: Center(
                 child: Icon(
                   Icons.image_outlined,
-                  size: 32.sp,
+                  size: 30.sp,
                   color: AppColors.greyColor,
                 ),
               ),

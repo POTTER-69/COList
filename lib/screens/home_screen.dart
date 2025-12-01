@@ -74,7 +74,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -82,15 +81,13 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             if (!_isSearching)
               Text("Your Lists", style: AppStyles.primaryHeadLinesStyle.copyWith(fontSize: 20)),
-
             SizedBox(height: 16.h),
-
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                // لسه بنفلتر بـ members عشان تشوف الحاجات اللي تخصك بس
                 stream: FirebaseFirestore.instance
                     .collection('lists')
                     .where('members', arrayContains: user?.uid)
+                    .where('archived', isEqualTo: false)
                     .orderBy('updatedAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
@@ -100,7 +97,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   var docs = snapshot.data?.docs ?? [];
 
-                  // كود البحث
                   if (_searchQuery.isNotEmpty) {
                     docs = docs.where((doc) {
                       final data = doc.data() as Map<String, dynamic>;
@@ -133,64 +129,79 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemBuilder: (context, index) {
                       final doc = docs[index];
                       final data = doc.data() as Map<String, dynamic>;
-
                       final Timestamp? timeStamp = data['updatedAt'] ?? data['createdAt'];
                       final String timeAgo = _formatTimeAgo(timeStamp);
                       final List membersList = (data['members'] is List) ? data['members'] : [];
                       final int membersCount = membersList.length;
 
-                      return Dismissible(
-                        key: Key(doc.id),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent,
-                            borderRadius: BorderRadius.circular(16.r),
-                          ),
-                          alignment: Alignment.centerRight,
-                          padding: EdgeInsets.only(right: 20.w),
-                          child: const Icon(Icons.delete_forever, color: Colors.white, size: 30),
-                        ),
-                        // ❌ لغينا شرط الـ ownerId هنا خلاص
-                        // أي حد يقدر يمسح
-                        onDismissed: (direction) {
-                          // 1. حفظ نسخة للتراجع
-                          final deletedData = data;
-                          final deletedId = doc.id;
+                      String imageUrl = data['imageUrl'] ?? '';
 
-                          // 2. الحذف الفعلي
-                          FirebaseFirestore.instance.collection('lists').doc(doc.id).delete();
-
-                          // 3. رسالة التراجع
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("'${data['name']}' deleted"),
-                              action: SnackBarAction(
-                                label: 'Undo',
-                                onPressed: () {
-                                  FirebaseFirestore.instance.collection('lists').doc(deletedId).set(deletedData);
-                                },
-                              ),
-                            ),
+                      return GestureDetector(
+                        onTap: () {
+                          context.push(
+                            AppRoutes.listDetailsScreen,
+                            extra: {'id': doc.id, 'name': data['name']},
                           );
                         },
-                        child: GestureDetector(
-                          onTap: () {
-                            context.push(
-                              AppRoutes.listDetailsScreen,
-                              extra: {'id': doc.id, 'name': data['name']},
-                            );
-                          },
-                          child: ListCard(
-                            imagePath: data['imageUrl'] ?? '',
-                            title: data['name'] ?? '',
-                            members: '$membersCount members',
-                            lastUpdated: 'Updated $timeAgo',
-                            onDelete: () async {
-                              // حذف مباشر بدون شروط
-                              await FirebaseFirestore.instance.collection('lists').doc(doc.id).delete();
-                            },
-                          ),
+                        child: Stack(
+                          children: [
+                            ListCard(
+                              imagePath: imageUrl, // يدعم Base64 أو URL
+                              title: data['name'] ?? '',
+                              members: '$membersCount members',
+                              lastUpdated: 'Updated $timeAgo',
+                              onDelete: () async {
+                                await FirebaseFirestore.instance.collection('lists').doc(doc.id).delete();
+                              },
+                            ),
+                            Positioned(
+                              right: 8,
+                              top: 8,
+                              child: GestureDetector(
+                                onTap: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    builder: (_) {
+                                      return SizedBox(
+                                        height: 180,
+                                        child: Column(
+                                          children: [
+                                            ListTile(
+                                              leading: const Icon(Icons.archive_outlined),
+                                              title: const Text("Archive"),
+                                              onTap: () async {
+                                                await FirebaseFirestore.instance
+                                                    .collection('lists')
+                                                    .doc(doc.id)
+                                                    .update({"archived": true});
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                            ListTile(
+                                              leading: const Icon(Icons.delete_outline),
+                                              title: const Text("Delete"),
+                                              onTap: () async {
+                                                await FirebaseFirestore.instance
+                                                    .collection('lists')
+                                                    .doc(doc.id)
+                                                    .delete();
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                                child: const CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: Colors.black12,
+                                  child: Icon(Icons.more_vert, color: Colors.black),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -201,7 +212,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-
       bottomNavigationBar: Container(
         height: 80.h,
         decoration: BoxDecoration(
@@ -221,9 +231,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 InkWell(
                   onTap: () => context.push(AppRoutes.addToListScreen),
                   child: Container(
-                    width: 56.w, height: 56.h,
-                    decoration: BoxDecoration(color: AppColors.primaryColor, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AppColors.primaryColor.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))]),
-                    child: Center(child: Container(width: 22.w, height: 22.h, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6.r)), child: Icon(Icons.add, color: AppColors.primaryColor, size: 18.sp))),
+                    width: 56.w,
+                    height: 56.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: AppColors.primaryColor.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 22.w,
+                        height: 22.h,
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6.r)),
+                        child: Icon(Icons.add, color: AppColors.primaryColor, size: 18.sp),
+                      ),
+                    ),
                   ),
                 ),
                 IconButton(icon: Icon(Icons.inventory_2_outlined, size: 28.sp, color: AppColors.greyColor), onPressed: () => context.push(AppRoutes.archivedScreen)),
