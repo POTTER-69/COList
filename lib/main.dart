@@ -1,5 +1,4 @@
-
-  import 'package:colist_proj/routes/router_generation_config.dart';
+import 'package:colist_proj/routes/router_generation_config.dart';
   import 'package:colist_proj/screens/on_boarding/on_boarding_services/on_boarding_services.dart';
   import 'package:firebase_core/firebase_core.dart';
   import 'package:flutter/material.dart';

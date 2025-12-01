@@ -7,6 +7,8 @@ class AppAssets {
   static const String onBoarding2 = '${imagesPath}onBoarding2.png';
   static const String onBoarding3 = '${imagesPath}onBoarding3.png';
   static const String welcomeScreen = '${imagesPath}welcomeScreen.png';
+  static const String splashScreen = '${imagesPath}logo.jpg';
+
   // Icons
 
 

@@ -1,60 +1,129 @@
-import 'package:colist_proj/utils/constants/app_assets.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 
-import '../utils/constants/app_text_styles.dart';
+import 'package:colist_proj/routes/app_routs.dart';
+import 'package:colist_proj/utils/constants/app_assets.dart';
+import 'package:colist_proj/utils/constants/app_text_styles.dart';
+import 'package:colist_proj/utils/constants/app_colors.dart';
 import '../widgets/list_card_widgets.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
+        backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
         leading: IconButton(
           icon: SvgPicture.asset(AppAssets.personn),
-          onPressed: () {},
+          onPressed: () => context.push(AppRoutes.profileScreen),
         ),
+        centerTitle: true,
+        title: _isSearching
+            ? TextField(
+          controller: _searchController,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: "Search lists...",
+            border: InputBorder.none,
+            hintStyle: TextStyle(color: Colors.grey[400]),
+          ),
+          style: AppStyles.black18BoldStyle,
+          onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+        )
+            : null,
         actions: [
           IconButton(
-            icon: SvgPicture.asset(AppAssets.search),
-            onPressed: () {},
+            icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.black),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _isSearching = false;
+                  _searchQuery = "";
+                  _searchController.clear();
+                } else {
+                  _isSearching = true;
+                }
+              });
+            },
           ),
         ],
       ),
+
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Your Lists",
-              style: AppStyles.primaryHeadLinesStyle.copyWith(fontSize: 20),
-            ),
+            if (!_isSearching)
+              Text("Your Lists", style: AppStyles.primaryHeadLinesStyle.copyWith(fontSize: 20)),
+
             SizedBox(height: 16.h),
+
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
+                // لسه بنفلتر بـ members عشان تشوف الحاجات اللي تخصك بس
                 stream: FirebaseFirestore.instance
                     .collection('lists')
-                    .orderBy('createdAt', descending: true)
+                    .where('members', arrayContains: user?.uid)
+                    .orderBy('updatedAt', descending: true)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('No lists found.'));
+
+                  var docs = snapshot.data?.docs ?? [];
+
+                  // كود البحث
+                  if (_searchQuery.isNotEmpty) {
+                    docs = docs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final name = (data['name'] ?? '').toString().toLowerCase();
+                      return name.contains(_searchQuery);
+                    }).toList();
                   }
 
-                  final lists = snapshot.data!.docs;
+                  if (docs.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.format_list_bulleted, size: 60.sp, color: Colors.grey[300]),
+                          SizedBox(height: 10.h),
+                          Text('No lists found.', style: TextStyle(color: Colors.grey[400])),
+                        ],
+                      ),
+                    );
+                  }
 
                   return GridView.builder(
-                    itemCount: lists.length,
+                    itemCount: docs.length,
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       mainAxisSpacing: 16,
@@ -62,41 +131,67 @@ class HomeScreen extends StatelessWidget {
                       childAspectRatio: 0.78,
                     ),
                     itemBuilder: (context, index) {
-                      final doc = lists[index];
+                      final doc = docs[index];
                       final data = doc.data() as Map<String, dynamic>;
 
-                      return ListCard(
-                        imagePath: data['imageUrl'] ?? '',
-                        title: data['name'] ?? '',
-                        members: '${(data['items'] as List).length} items',
-                        lastUpdated: 'Just now',
-                        onDelete: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('Delete List?'),
-                              content: const Text(
-                                  'Are you sure you want to delete this list?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, false),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  child: const Text('Delete'),
-                                ),
-                              ],
+                      final Timestamp? timeStamp = data['updatedAt'] ?? data['createdAt'];
+                      final String timeAgo = _formatTimeAgo(timeStamp);
+                      final List membersList = (data['members'] is List) ? data['members'] : [];
+                      final int membersCount = membersList.length;
+
+                      return Dismissible(
+                        key: Key(doc.id),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            borderRadius: BorderRadius.circular(16.r),
+                          ),
+                          alignment: Alignment.centerRight,
+                          padding: EdgeInsets.only(right: 20.w),
+                          child: const Icon(Icons.delete_forever, color: Colors.white, size: 30),
+                        ),
+                        // ❌ لغينا شرط الـ ownerId هنا خلاص
+                        // أي حد يقدر يمسح
+                        onDismissed: (direction) {
+                          // 1. حفظ نسخة للتراجع
+                          final deletedData = data;
+                          final deletedId = doc.id;
+
+                          // 2. الحذف الفعلي
+                          FirebaseFirestore.instance.collection('lists').doc(doc.id).delete();
+
+                          // 3. رسالة التراجع
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("'${data['name']}' deleted"),
+                              action: SnackBarAction(
+                                label: 'Undo',
+                                onPressed: () {
+                                  FirebaseFirestore.instance.collection('lists').doc(deletedId).set(deletedData);
+                                },
+                              ),
                             ),
                           );
-
-                          if (confirm == true) {
-                            await FirebaseFirestore.instance
-                                .collection('lists')
-                                .doc(doc.id)
-                                .delete();
-                          }
                         },
+                        child: GestureDetector(
+                          onTap: () {
+                            context.push(
+                              AppRoutes.listDetailsScreen,
+                              extra: {'id': doc.id, 'name': data['name']},
+                            );
+                          },
+                          child: ListCard(
+                            imagePath: data['imageUrl'] ?? '',
+                            title: data['name'] ?? '',
+                            members: '$membersCount members',
+                            lastUpdated: 'Updated $timeAgo',
+                            onDelete: () async {
+                              // حذف مباشر بدون شروط
+                              await FirebaseFirestore.instance.collection('lists').doc(doc.id).delete();
+                            },
+                          ),
+                        ),
                       );
                     },
                   );
@@ -106,6 +201,52 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
+
+      bottomNavigationBar: Container(
+        height: 80.h,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2)),
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(icon: Icon(Icons.home, size: 28.sp, color: AppColors.primaryColor), onPressed: () {}),
+                IconButton(icon: Icon(Icons.notifications_outlined, size: 28.sp, color: AppColors.greyColor), onPressed: () => context.push(AppRoutes.notificationScreen)),
+                InkWell(
+                  onTap: () => context.push(AppRoutes.addToListScreen),
+                  child: Container(
+                    width: 56.w, height: 56.h,
+                    decoration: BoxDecoration(color: AppColors.primaryColor, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AppColors.primaryColor.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))]),
+                    child: Center(child: Container(width: 22.w, height: 22.h, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6.r)), child: Icon(Icons.add, color: AppColors.primaryColor, size: 18.sp))),
+                  ),
+                ),
+                IconButton(icon: Icon(Icons.inventory_2_outlined, size: 28.sp, color: AppColors.greyColor), onPressed: () => context.push(AppRoutes.archivedScreen)),
+                IconButton(icon: Icon(Icons.settings_outlined, size: 28.sp, color: AppColors.greyColor), onPressed: () => context.push(AppRoutes.settingsScreen)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
+  }
+
+  String _formatTimeAgo(Timestamp? timestamp) {
+    if (timestamp == null) return 'Unknown';
+    final DateTime date = timestamp.toDate();
+    final DateTime now = DateTime.now();
+    final Duration diff = now.difference(date);
+    if (diff.inDays > 365) return '${(diff.inDays / 365).floor()}y ago';
+    if (diff.inDays > 30) return '${(diff.inDays / 30).floor()}mo ago';
+    if (diff.inDays > 7) return '${(diff.inDays / 7).floor()}w ago';
+    if (diff.inDays >= 1) return '${diff.inDays}d ago';
+    if (diff.inHours >= 1) return '${diff.inHours}h ago';
+    if (diff.inMinutes >= 1) return '${diff.inMinutes}m ago';
+    return 'Just now';
   }
 }

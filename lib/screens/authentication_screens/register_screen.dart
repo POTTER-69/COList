@@ -1,8 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../routes/app_routs.dart';
 import '../../utils/constants/app_colors.dart';
@@ -10,7 +10,7 @@ import '../../utils/constants/app_text_styles.dart';
 import '../../widgets/back_button_widget.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primay_button_widget.dart';
-
+import '../../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -25,6 +25,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+
+  // 👇 1. متغير لحالة إخفاء الباسورد
+  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -71,7 +76,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           CustomTextField(
                             controller: _usernameController,
                             hintText: 'Username',
-
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'This field is required';
@@ -97,10 +101,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           SizedBox(height: 16.h),
 
-                          // Password Field
+                          // Password Field (تم التعديل هنا)
                           CustomTextField(
                             controller: _passwordController,
                             hintText: 'Password',
+
+                            // 👇 ربط حالة الإخفاء (عكس المتغير)
+                            obscureText: !_isPasswordVisible,
 
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -111,13 +118,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               }
                               return null;
                             },
+
+                            // 👇 زرار العين
+                            suffixIcon: IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isPasswordVisible = !_isPasswordVisible;
+                                });
+                              },
+                              icon: Icon(
+                                _isPasswordVisible
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ),
                           SizedBox(height: 16.h),
 
-                          // Confirm Password Field
+                          // Confirm Password Field (تم التعديل هنا أيضاً)
                           CustomTextField(
                             controller: _confirmPasswordController,
                             hintText: 'Confirm password',
+
+                            // 👇 نفس حالة الإخفاء عشان يمشوا مع بعض
+                            obscureText: !_isPasswordVisible,
 
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -133,23 +158,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                           // Register Button
                           PrimaryButtonWidget(
-                            buttonText: "Register",
-                            onPress: () {
+                            buttonText: _isLoading ? "Loading..." : "Register",
+                            onPress: _isLoading
+                                ? () {}
+                                : () async {
                               if (_formKey.currentState!.validate()) {
-                                print(
-                                  'Register data: ${_usernameController.text}, ${_emailController.text}',
-                                );
+                                setState(() {
+                                  _isLoading = true;
+                                });
+                                try {
+                                  await _authService.signUpWithEmailPassword(
+                                    _emailController.text.trim(),
+                                    _passwordController.text.trim(),
+                                  );
+
+                                  final user = FirebaseAuth.instance.currentUser;
+                                  if (user != null) {
+                                    await user.updateDisplayName(_usernameController.text.trim());
+                                    await user.reload();
+                                  }
+
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Registration successful! Please login."),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                    GoRouter.of(context).pushReplacementNamed(AppRoutes.loginScreen);
+                                  }
+                                } on FirebaseAuthException catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(e.message ?? "Registration failed"),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+                                  }
+                                }
                               }
                             },
                           ),
+
                           SizedBox(height: 32.h),
-
-
                           SizedBox(height: 24.h),
-
-
-
                           SizedBox(height: 32.h),
+
                           Center(child: _buildLoginLink()),
                         ],
                       ),
@@ -163,9 +224,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-
-
-
 
   Widget _buildLoginLink() {
     return RichText(
@@ -188,7 +246,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-
-
-
-

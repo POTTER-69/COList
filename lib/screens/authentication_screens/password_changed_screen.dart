@@ -48,7 +48,7 @@ class PasswordChangedScreen extends StatelessWidget {
                 PrimaryButtonWidget(
                   buttonText: "Back to Login",
                   onPress: () {
-                    context.go(AppRoutes.loginScreen);
+                    context.goNamed(AppRoutes.loginScreen);
                   },
                 ),
               ],
